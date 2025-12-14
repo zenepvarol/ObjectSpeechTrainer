@@ -1,0 +1,78 @@
+﻿#if EASY_ML_KIT_SUPPORT_AR_FOUNDATION
+using System;
+using UnityEngine;
+using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
+
+namespace VoxelBusters.EasyMLKit.Common
+{
+    public class ARFoundationCameraInputSource : IInputSource
+    {
+        public ARCameraManager CameraManager
+        {
+            get;
+            private set;
+        }
+
+        public ARSession Session
+        {
+            get;
+            private set;
+        }
+
+        private XRCameraFrame m_previousFrame = default;
+        
+
+        public event Action<XRSessionSubsystem, XRCameraFrame> CameraFrameUpdated;
+
+
+        public ARFoundationCameraInputSource(ARSession session, ARCameraManager cameraManager)
+        {
+            Session                     = session;
+            CameraManager               = cameraManager;
+        }
+
+        public void Register()
+        {
+            CameraManager.frameReceived += OnCameraFrameReceived;
+        }
+
+        public void Unregister()
+        {
+            CameraManager.frameReceived -= OnCameraFrameReceived;
+        }
+
+
+        private void OnCameraFrameReceived(ARCameraFrameEventArgs eventArgs)
+        {
+
+            var cameraParams = new XRCameraParams
+            {
+                zNear = CameraManager.GetComponent<Camera>().nearClipPlane,
+                zFar = CameraManager.GetComponent<Camera>().farClipPlane,
+                screenWidth = Screen.width,
+                screenHeight = Screen.height,
+                screenOrientation = Screen.orientation
+            };
+
+            if (CameraManager.subsystem.TryGetLatestFrame(cameraParams, out XRCameraFrame cameraFrame))
+            {
+                if (IsNewFrame(cameraFrame))
+                {
+                    CameraFrameUpdated?.Invoke(Session.subsystem, cameraFrame);
+                }
+
+                m_previousFrame = cameraFrame;
+            }
+        }
+
+        private bool IsNewFrame(XRCameraFrame currentFrame)
+        {
+            m_previousFrame.TryGetTimestamp(out long oldTimestamp);
+            currentFrame.TryGetTimestamp(out long currentTimestamp);
+
+            return currentTimestamp > oldTimestamp;
+        }
+    }
+}
+#endif

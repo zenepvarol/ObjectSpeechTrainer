@@ -1,0 +1,7 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit.TextRecognizer">
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.TextRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Android.TextRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Null.TextRecognizerImplementation" preserve="all" />
+  </assembly>
+</linker>

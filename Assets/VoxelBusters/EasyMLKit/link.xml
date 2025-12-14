@@ -1,0 +1,6 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit">
+    <namespace fullname="VoxelBusters.EasyMLKit.Implementations.iOS" preserve="all" />
+    <namespace fullname="VoxelBusters.EasyMLKit.Implementations.iOS.Internal" preserve="all" />
+  </assembly>
+</linker>

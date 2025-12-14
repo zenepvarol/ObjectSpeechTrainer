@@ -1,0 +1,7 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit.ObjectDetectorAndTracker">
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.ObjectDetectorAndTrackerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Android.ObjectDetectorAndTrackerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Null.ObjectDetectorAndTrackerImplementation" preserve="all" />
+  </assembly>
+</linker>

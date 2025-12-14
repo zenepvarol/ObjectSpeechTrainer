@@ -1,0 +1,10 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit">
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Null.BarcodeScannerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.ObjectDetectorAndTrackerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.TextRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.FaceDetectorImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.DigitalInkRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.BarcodeScannerImplementation" preserve="nothing" />
+  </assembly>
+</linker>

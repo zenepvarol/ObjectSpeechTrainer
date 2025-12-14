@@ -1,0 +1,7 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit.DigitalInkRecognizer">
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.DigitalInkRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Android.DigitalInkRecognizerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Null.DigitalInkRecognizerImplementation" preserve="all" />
+  </assembly>
+</linker>

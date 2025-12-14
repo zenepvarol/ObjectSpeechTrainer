@@ -1,0 +1,7 @@
+﻿<linker>
+  <assembly fullname="VoxelBusters.EasyMLKit.BarcodeScanner">
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.iOS.BarcodeScannerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Android.BarcodeScannerImplementation" preserve="all" />
+    <type fullname="VoxelBusters.EasyMLKit.Implementations.Null.BarcodeScannerImplementation" preserve="all" />
+  </assembly>
+</linker>
