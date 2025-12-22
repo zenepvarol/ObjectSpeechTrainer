@@ -174,7 +174,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 310631be4bf08b646b721461a5b09ec7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyDGNw7EHD1yf031ITMIr99u4q3y_lVWIXM
+  geminiApiKey: AIzaSyCCTb6HWGNaGBFJfHr7vTB2OJasX8wxyO4
   targetWord: apple
   recorder: {fileID: 1043202860}
   geminiService: {fileID: 1043202859}
@@ -418,7 +418,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 310631be4bf08b646b721461a5b09ec7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyDGNw7EHD1yf031ITMIr99u4q3y_lVWIXM
+  geminiApiKey: AIzaSyCCTb6HWGNaGBFJfHr7vTB2OJasX8wxyO4
   targetWord: apple
   recorder: {fileID: 1043202860}
   geminiService: {fileID: 1043202859}
@@ -1203,7 +1203,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 812987c3573b52f4d92dd173d7c9fb94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyDGNw7EHD1yf031ITMIr99u4q3y_lVWIXM
+  geminiApiKey: AIzaSyCCTb6HWGNaGBFJfHr7vTB2OJasX8wxyO4
   scoreText: {fileID: 0}
 --- !u!4 &894548026
 Transform:
@@ -1357,7 +1357,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 310631be4bf08b646b721461a5b09ec7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyDGNw7EHD1yf031ITMIr99u4q3y_lVWIXM
+  geminiApiKey: AIzaSyCCTb6HWGNaGBFJfHr7vTB2OJasX8wxyO4
   targetWord: apple
   recorder: {fileID: 1043202860}
   geminiService: {fileID: 1043202859}

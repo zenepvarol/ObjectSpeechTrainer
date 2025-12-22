@@ -11,4 +11,13 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/OpenCVForUnity/OpenCVForUnity/Examples/MainModules/dnn/ObjectDetectionYOLOXExample/ObjectDetectionYOLOXExample.unity
     guid: 03ea3b6163786c34695774b1aaf8f67a
+  - enabled: 1
+    path: Assets/Scenes/MiniGameScene.unity
+    guid: 1fa5d9a85becbf846b2f80d61d943671
+  - enabled: 1
+    path: Assets/Scenes/MemoryGameScene.unity
+    guid: 15ad5a1c321fac2449519005c97a27b4
+  - enabled: 1
+    path: Assets/Scenes/WordScrambleScene.unity
+    guid: 51d4a0caa1435144fb96203a4ad6b864
   m_configObjects: {}

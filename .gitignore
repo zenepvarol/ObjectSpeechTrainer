@@ -73,3 +73,14 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# --- BURASI SENIN ICIN OZEL EKLENDI ---
+
+# 100MB uzeri olan Yapay Zeka modeli
+*.caffemodel
+
+# WebGL dosyalari (Gerek yoksa yukleme)
+/[Aa]ssets/OpenCVForUnity/Plugins/WebGL/
+# --- Firebase Buyuk Dosyalar ---
+*.bundle
+*.so

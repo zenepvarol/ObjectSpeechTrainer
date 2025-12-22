@@ -4,7 +4,10 @@ using System.Collections;
 using System;
 using System.Text;
 using System.IO;
-using UnityEngine.UI; // Standart Text için
+using UnityEngine.UI;
+using Firebase;
+using Firebase.Database;
+using Firebase.Extensions;
 
 namespace OpenCVForUnityExample
 {
@@ -13,10 +16,13 @@ namespace OpenCVForUnityExample
         [Header("Gemini Ayarları")]
         public string geminiApiKey = "BURAYA_API_KEY_YAZIN";
 
-        [Header("UI Bağlantıları")]
-        public Text scoreText; // Ekrana sonucu yazacak yazı
+        [Header("Dil Ayarları")]
+        public static string CurrentLanguage = "English";
 
-        // Hedef kelime (YOLO'dan gelecek)
+        [Header("UI Bağlantıları")]
+        public Text scoreText;
+
+        // Hedef kelime
         private string currentTargetWord = "";
 
         // Ses kaydı değişkenleri
@@ -27,7 +33,9 @@ namespace OpenCVForUnityExample
         // Gemini Adresi
         private const string API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent";
 
-        // Diğer scriptlerden ulaşmak için
+        // Firebase Referansı
+        private DatabaseReference dbReference;
+
         public static PronunciationGame Instance;
 
         void Awake()
@@ -38,28 +46,42 @@ namespace OpenCVForUnityExample
 
         void Start()
         {
+            // --- FIREBASE BAŞLATMA ---
+            FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
+                var dependencyStatus = task.Result;
+                if (dependencyStatus == DependencyStatus.Available)
+                {
+                    // Firebase hazır, referansı al
+                    dbReference = FirebaseDatabase.DefaultInstance.RootReference;
+                    Debug.Log("Firebase Bağlantısı Başarılı!");
+                }
+                else
+                {
+                    Debug.LogError(System.String.Format(
+                      "Firebase hatası: {0}", dependencyStatus));
+                }
+            });
+
             // Mikrofon kontrolü
             if (Microphone.devices.Length > 0)
             {
                 deviceName = Microphone.devices[0];
-                Debug.Log("✅ Mikrofon Hazır: " + deviceName);
+                Debug.Log("Mikrofon Hazır: " + deviceName);
             }
             else
             {
-                Debug.LogError("❌ MİKROFON BULUNAMADI!");
+                Debug.LogError("MİKROFON BULUNAMADI!");
                 if (scoreText) scoreText.text = "Mikrofon Yok!";
             }
         }
 
-        // --- ENTEGRASYON NOKTASI ---
         public void SetTargetWord(string detectedObjectName)
         {
             currentTargetWord = detectedObjectName.Trim();
-            Debug.Log("🎯 Yeni Hedef: " + currentTargetWord);
+            Debug.Log("Yeni Hedef: " + currentTargetWord);
             if (scoreText) scoreText.text = "Şunu oku: " + currentTargetWord.ToUpper();
         }
 
-        // --- KAYIT BAŞLAT ---
         public void StartRecording()
         {
             if (string.IsNullOrEmpty(currentTargetWord))
@@ -71,13 +93,13 @@ namespace OpenCVForUnityExample
             if (string.IsNullOrEmpty(deviceName)) return;
 
             isRecording = true;
+            // 10 saniyelik kayıt limiti
             recordingClip = Microphone.Start(deviceName, false, 10, 44100);
 
-            if (scoreText) scoreText.text = "🔴 Dinliyorum...";
-            Debug.Log($"🔴 Kayıt Başladı... (Hedef: {currentTargetWord})");
+            if (scoreText) scoreText.text = "Dinliyorum...";
+            Debug.Log($"Kayıt Başladı... (Hedef: {currentTargetWord})");
         }
 
-        // --- KAYDI BİTİR VE YOLLA ---
         public void StopAndCheck()
         {
             if (!isRecording) return;
@@ -99,11 +121,16 @@ namespace OpenCVForUnityExample
 
             string base64Audio = Convert.ToBase64String(audioData);
 
+            // --- GÜNCELLEME 2: Gemini Prompt (Torpil Engelleyici) ---
+            // Eski kodda hedef kelimeyi söylüyorduk, Gemini düzeltiyordu.
+            // Şimdi "Ne duyuyorsan onu yaz, düzeltme yapma" diyoruz.
+            string promptText = "Listen to this audio. Transcribe exactly the single word that is spoken. Do not auto-correct. If it sounds like 'bottle', write 'bottle'.";
+
             string jsonBody = $@"
             {{
                 ""contents"": [{{
                     ""parts"": [
-                        {{ ""text"": ""Listen to this audio. Output ONLY the single word that is spoken. No punctuation."" }},
+                        {{ ""text"": ""{promptText}"" }},
                         {{
                             ""inline_data"": {{
                                 ""mime_type"": ""audio/wav"",
@@ -136,7 +163,7 @@ namespace OpenCVForUnityExample
                     // Puanı Hesapla
                     int score = CalculateScore(currentTargetWord, spokenWord);
 
-                    // --- EKRANA YAZDIRMA (KAYIT YOK) ---
+                    // --- EKRANA YAZDIRMA ---
                     if (scoreText)
                     {
                         if (score >= 75)
@@ -156,9 +183,49 @@ namespace OpenCVForUnityExample
                         }
                     }
 
-                    Debug.Log($"Hedef: {currentTargetWord} | Duyulan: {spokenWord} | Puan: {score}");
+                    Debug.Log($"Hedef: {currentTargetWord} | Duyulan: {spokenWord} | Puan: {score} | Dil: {CurrentLanguage}");
+
+                    // --- FIREBASE'E KAYDET ---
+                    SaveToFirebase(currentTargetWord, score);
                 }
             }
+        }
+
+        // --- FIREBASE KAYIT FONKSİYONU ---
+        void SaveToFirebase(string word, int score)
+        {
+            // --- GÜNCELLEME 1: Düşük Puan Filtresi ---
+            // Eğer puan 50'den düşükse, veritabanını kirletme ve fonksiyondan çık.
+            if (score < 50)
+            {
+                Debug.Log($"Puan düşük ({score}), veritabanına kaydedilmedi.");
+                return;
+            }
+
+            if (dbReference == null)
+            {
+                Debug.LogWarning("Firebase hazır değil, kayıt yapılamadı.");
+                return;
+            }
+
+            // Benzersiz bir ID oluştur (Push)
+            string key = dbReference.Child("scores").Push().Key;
+
+            // Veri paketini hazırla (DİL BİLGİSİ İLE)
+            UserScore data = new UserScore(word, score, CurrentLanguage);
+            string json = JsonUtility.ToJson(data);
+
+            // Veritabanına yaz
+            dbReference.Child("scores").Child(key).SetRawJsonValueAsync(json).ContinueWithOnMainThread(task => {
+                if (task.IsCompleted)
+                {
+                    Debug.Log($"SONUÇ VERİTABANINA KAYDEDİLDİ! ({CurrentLanguage})");
+                }
+                else
+                {
+                    Debug.LogError("Kayıt başarısız: " + task.Exception);
+                }
+            });
         }
 
         // --- YARDIMCI FONKSİYONLAR ---
@@ -247,6 +314,24 @@ namespace OpenCVForUnityExample
             float maxLen = Mathf.Max(n, m);
             float similarity = 1.0f - ((float)d[n, m] / maxLen);
             return Mathf.Clamp((int)(similarity * 100), 0, 100);
+        }
+    }
+
+    // --- GÜNCELLENMİŞ VERİ YAPISI ---
+    [Serializable]
+    public class UserScore
+    {
+        public string word;
+        public int score;
+        public string language; // YENİ: Dil bilgisi
+        public string date;
+
+        public UserScore(string word, int score, string language)
+        {
+            this.word = word;
+            this.score = score;
+            this.language = language; // Dili kaydet
+            this.date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
         }
     }
 }
