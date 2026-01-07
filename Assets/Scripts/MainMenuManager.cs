@@ -3,6 +3,7 @@ using UnityEngine.SceneManagement;
 using Firebase;
 using Firebase.Database;
 using Firebase.Extensions;
+using Firebase.Auth; 
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -10,15 +11,17 @@ public class MainMenuManager : MonoBehaviour
     public GameObject settingsPanel;
 
     [Header("Emin Misin Paneli")]
-    public GameObject confirmationPanel; 
+    public GameObject confirmationPanel;
 
     private DatabaseReference dbReference;
 
     private void Start()
     {
+        // Panelleri baþlangýçta gizle
         if (settingsPanel != null) settingsPanel.SetActive(false);
         if (confirmationPanel != null) confirmationPanel.SetActive(false);
 
+        // Firebase Baþlatma
         FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task => {
             if (task.Result == DependencyStatus.Available)
             {
@@ -30,6 +33,8 @@ public class MainMenuManager : MonoBehaviour
             }
         });
     }
+
+    // --- NAVÝGASYON ---
 
     public void SelectLanguage(string languageCode)
     {
@@ -67,6 +72,19 @@ public class MainMenuManager : MonoBehaviour
         Debug.Log("Oyundan çýkýlýyor...");
         Application.Quit();
     }
+
+    public void SignOutUser()
+    {
+        // 1. Firebase oturumunu kapat
+        FirebaseAuth.DefaultInstance.SignOut();
+
+        Debug.Log("Çýkýþ yapýldý. Giriþ ekranýna dönülüyor...");
+
+        // 2. Login sahnesine geri gönder
+        SceneManager.LoadScene("LoginScene");
+    }
+
+    // --- ÝLERLEME SIFIRLAMA (RESET) ---
 
     public void OpenConfirmation()
     {

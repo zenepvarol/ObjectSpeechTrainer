@@ -1139,7 +1139,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 812987c3573b52f4d92dd173d7c9fb94, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyCS2Ql5KfxJy-yHmpIBaJMn_iYEn7IRMRs
+  geminiApiKey: AIzaSyDuxCGNJ9epEr_KqYZs6RF8sEukFR_UEss
   scoreText: {fileID: 0}
 --- !u!4 &894548026
 Transform:
@@ -1294,7 +1294,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 310631be4bf08b646b721461a5b09ec7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  geminiApiKey: AIzaSyCS2Ql5KfxJy-yHmpIBaJMn_iYEn7IRMRs
+  geminiApiKey: AIzaSyDuxCGNJ9epEr_KqYZs6RF8sEukFR_UEss
   targetWord: apple
   recorder: {fileID: 1043202860}
   geminiService: {fileID: 1043202859}
