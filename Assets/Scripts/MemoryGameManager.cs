@@ -1,38 +1,31 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement; 
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 using Firebase;
 using Firebase.Database;
 using Firebase.Extensions;
+using Firebase.Auth;
 using OpenCVForUnityExample;
 
 public class MemoryGameManager : MonoBehaviour
 {
-    [Header("Ayarlar")]
     public GameObject cardPrefab;
     public Transform gridContainer;
-    public GameObject gameOverPanel; 
+    public GameObject gameOverPanel;
 
-    [Header("Yedek Kelimeler")]
-    public List<string> backupWords = new List<string> { "Test", "Game", "Unity", "Code", "Play", "Fun" };
-
+    public List<string> backupWords = new List<string> { "Apple", "Banana", "Cat", "Dog" };
     private List<MemoryCard> openCards = new List<MemoryCard>();
     private bool canClick = true;
-
-    // Oyun Takibi Ýçin Yeni Deðiþkenler
-    private int totalPairs;      // Toplam bulunmasý gereken çift sayýsý
-    private int matchesFound;    // Þu ana kadar bulunan çift sayýsý
-    private List<string> currentWordList; // Yeniden baþlatmak için listeyi hafýzada tut
-
+    private int totalPairs;
+    private int matchesFound;
+    private List<CardData> currentCardDataList;
     private DatabaseReference dbReference;
 
     void Start()
     {
-        // Paneli gizle
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
-
         StartCoroutine(InitializeFirebaseAndLoad());
     }
 
@@ -40,176 +33,100 @@ public class MemoryGameManager : MonoBehaviour
     {
         var task = FirebaseApp.CheckAndFixDependenciesAsync();
         yield return new WaitUntil(() => task.IsCompleted);
-
         if (task.Result == DependencyStatus.Available)
         {
             dbReference = FirebaseDatabase.DefaultInstance.RootReference;
             LoadWordsFromFirebase();
         }
-        else
-        {
-            StartGame(backupWords);
-        }
+        else { StartGameWithBackups(); }
     }
 
     void LoadWordsFromFirebase()
     {
-        string currentLang = PronunciationGame.CurrentLanguage;
+        var currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
+        if (currentUser == null) { StartGameWithBackups(); return; }
 
-        dbReference.Child("scores").GetValueAsync().ContinueWithOnMainThread(task =>
-        {
-            if (task.IsFaulted || task.IsCanceled)
-            {
-                StartGame(backupWords);
-                return;
-            }
+        dbReference.Child("scores").Child(currentUser.UserId).GetValueAsync().ContinueWithOnMainThread(task => {
+            if (task.IsFaulted || task.IsCanceled) { StartGameWithBackups(); return; }
 
             DataSnapshot snapshot = task.Result;
-            HashSet<string> learnedWordsSet = new HashSet<string>();
+            Dictionary<string, string> uniqueWords = new Dictionary<string, string>();
 
-            foreach (DataSnapshot child in snapshot.Children)
+            if (snapshot.Exists)
             {
-                string json = child.GetRawJsonValue();
-                SimpleScoreData data = JsonUtility.FromJson<SimpleScoreData>(json);
-
-                if (data != null && data.language == currentLang)
+                foreach (DataSnapshot child in snapshot.Children)
                 {
-                    learnedWordsSet.Add(data.word.ToUpper());
+                    SimpleScoreData data = JsonUtility.FromJson<SimpleScoreData>(child.GetRawJsonValue());
+                    if (data != null && !string.IsNullOrEmpty(data.word))
+                    {
+                        string upperWord = data.word.ToUpper();
+                        if (!uniqueWords.ContainsKey(upperWord)) uniqueWords.Add(upperWord, data.language);
+                    }
                 }
             }
 
-            List<string> finalWordList = new List<string>(learnedWordsSet);
+            List<CardData> finalCards = new List<CardData>();
+            foreach (var item in uniqueWords) finalCards.Add(new CardData { word = item.Key, language = item.Value });
 
-            if (finalWordList.Count >= 6)
+            if (finalCards.Count >= 2)
             {
-                ShuffleList(finalWordList);
-                StartGame(finalWordList.GetRange(0, 6));
+                ShuffleList(finalCards);
+                StartGame(finalCards.GetRange(0, Mathf.Min(finalCards.Count, 6)));
             }
-            else if (finalWordList.Count > 0)
-            {
-                StartGame(finalWordList);
-            }
-            else
-            {
-                StartGame(backupWords);
-            }
+            else { StartGameWithBackups(); }
         });
     }
 
-    // --- OYUN KURULUMU ---
-    void StartGame(List<string> sourceList)
+    void StartGameWithBackups()
     {
-        currentWordList = new List<string>(sourceList); // Listeyi kaydet (Restart için)
-        totalPairs = sourceList.Count;                  // Hedef çift sayýsýný belirle
-        matchesFound = 0;                               // Sayacý sýfýrla
+        List<CardData> backupData = new List<CardData>();
+        foreach (string s in backupWords) backupData.Add(new CardData { word = s.ToUpper(), language = "English" });
+        StartGame(backupData);
+    }
 
-        if (gameOverPanel != null) gameOverPanel.SetActive(false); // Paneli kapat
-
-        // 1. Kelimeleri Çiftle
-        List<string> deck = new List<string>();
-        foreach (string word in sourceList)
-        {
-            deck.Add(word);
-            deck.Add(word);
-        }
-
+    void StartGame(List<CardData> sourceList)
+    {
+        currentCardDataList = new List<CardData>(sourceList);
+        totalPairs = sourceList.Count; matchesFound = 0;
+        if (gameOverPanel != null) gameOverPanel.SetActive(false);
+        List<CardData> deck = new List<CardData>();
+        foreach (CardData data in sourceList) { deck.Add(data); deck.Add(data); }
         ShuffleList(deck);
-
-        // Masayý Temizle
         foreach (Transform child in gridContainer) Destroy(child.gameObject);
-
-        // Kartlarý Daðýt
-        foreach (string word in deck)
+        foreach (CardData data in deck)
         {
             GameObject cardObj = Instantiate(cardPrefab, gridContainer);
-            MemoryCard cardScript = cardObj.GetComponent<MemoryCard>();
-            if (cardScript != null) cardScript.Setup(word, this);
+            cardObj.GetComponent<MemoryCard>().Setup(data.word, data.language, this);
         }
     }
 
-    // --- KART MANTIÐI ---
     public void CardSelected(MemoryCard card)
     {
         if (!canClick || openCards.Contains(card)) return;
-
-        card.FlipOpen();
-        openCards.Add(card);
-
+        card.FlipOpen(); openCards.Add(card);
         if (openCards.Count == 2) StartCoroutine(CheckMatch());
     }
 
     IEnumerator CheckMatch()
     {
-        canClick = false;
-        yield return new WaitForSeconds(1.0f);
-
+        canClick = false; yield return new WaitForSeconds(1.0f);
         if (openCards[0].myWord == openCards[1].myWord)
         {
-            // EÞLEÞTÝ!
-            openCards[0].MatchFound();
-            openCards[1].MatchFound();
-
-            matchesFound++; // Sayacý artýr
-            CheckGameOver(); // Oyun bitti mi kontrol et
+            openCards[0].MatchFound(); openCards[1].MatchFound();
+            matchesFound++; if (matchesFound >= totalPairs) gameOverPanel.SetActive(true);
         }
-        else
-        {
-            openCards[0].FlipClose();
-            openCards[1].FlipClose();
-        }
-        openCards.Clear();
-        canClick = true;
+        else { openCards[0].FlipClose(); openCards[1].FlipClose(); }
+        openCards.Clear(); canClick = true;
     }
 
-    // --- OYUN SONU KONTROLÜ ---
-    void CheckGameOver()
-    {
-        if (matchesFound >= totalPairs)
-        {
-            Debug.Log("OYUN BÝTTÝ! TEBRÝKLER!");
-            // Biraz bekle sonra paneli aç
-            StartCoroutine(ShowWinPanel());
-        }
-    }
-
-    IEnumerator ShowWinPanel()
-    {
-        yield return new WaitForSeconds(0.5f);
-        if (gameOverPanel != null) gameOverPanel.SetActive(true);
-
-        // Opsiyonel: Bitiþ sesi veya alkýþ efekti çaldýrabilirsin
-    }
-
-    // --- BUTON FONKSÝYONLARI ---
-
-    // 1. Tekrar Oyna
-    public void RestartGame()
-    {
-        StartGame(currentWordList); // Ayný kelimelerle yeniden baþlat
-    }
-
-    // 2. Menüye Dön
-    public void BackToMenu()
-    {
-        SceneManager.LoadScene("MiniGameScene");
-    }
-
+    public void RestartGame() { StartGame(currentCardDataList); }
+    public void BackToMenu() { SceneManager.LoadScene("MiniGameScene"); }
     void ShuffleList<T>(List<T> list)
     {
         for (int i = 0; i < list.Count; i++)
         {
-            T temp = list[i];
-            int randomIndex = Random.Range(i, list.Count);
-            list[i] = list[randomIndex];
-            list[randomIndex] = temp;
+            T temp = list[i]; int r = Random.Range(i, list.Count);
+            list[i] = list[r]; list[r] = temp;
         }
     }
-}
-
-[System.Serializable]
-public class SimpleScoreData
-{
-    public string word;
-    public int score;
-    public string language;
 }

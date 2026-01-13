@@ -6,6 +6,7 @@ using TMPro;
 using Firebase;
 using Firebase.Database;
 using Firebase.Extensions;
+using Firebase.Auth;
 using OpenCVForUnityExample;
 
 public class WordScrambleManager : MonoBehaviour
@@ -14,20 +15,19 @@ public class WordScrambleManager : MonoBehaviour
     public GameObject letterPrefab;
     public Transform answerArea;
     public Transform letterArea;
-    public TMP_Text feedbackText;  
+    public TMP_Text feedbackText;
 
     [Header("Yedek Kelimeler")]
     public List<string> backupWords = new List<string> { "UNITY", "GAME", "CODE", "TEST", "PLAY" };
 
     private string currentWord;
+    private string currentLanguage; // Kelimenin orijinal dilini tutmak için
     private DatabaseReference dbReference;
     private bool isInteractable = true;
 
     void Start()
     {
-        // Baþlangýçta yazýyý gizle
         if (feedbackText != null) feedbackText.gameObject.SetActive(false);
-
         StartCoroutine(InitializeFirebase());
     }
 
@@ -43,52 +43,69 @@ public class WordScrambleManager : MonoBehaviour
         }
         else
         {
-            StartGame(backupWords[Random.Range(0, backupWords.Count)]);
+            StartGameWithBackup();
         }
     }
 
     void LoadWordFromFirebase()
     {
-        string currentLang = PronunciationGame.CurrentLanguage;
+        var currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
 
-        dbReference.Child("scores").GetValueAsync().ContinueWithOnMainThread(task =>
+        if (currentUser == null)
+        {
+            StartGameWithBackup();
+            return;
+        }
+
+        string userId = currentUser.UserId;
+
+        // Kullanýcýnýn klasörüne odaklan
+        dbReference.Child("scores").Child(userId).GetValueAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsFaulted || task.IsCanceled)
             {
-                StartGame(backupWords[Random.Range(0, backupWords.Count)]);
+                StartGameWithBackup();
                 return;
             }
 
             DataSnapshot snapshot = task.Result;
-            if (snapshot == null || !snapshot.Exists)
+            List<CardData> possibleWords = new List<CardData>();
+
+            if (snapshot != null && snapshot.Exists)
             {
-                StartGame(backupWords[Random.Range(0, backupWords.Count)]);
-                return;
-            }
-
-            List<string> possibleWords = new List<string>();
-            foreach (DataSnapshot child in snapshot.Children)
-            {
-                string json = child.GetRawJsonValue();
-                if (string.IsNullOrEmpty(json)) continue;
-
-                SimpleScoreData data = JsonUtility.FromJson<SimpleScoreData>(json);
-
-                if (data != null && data.language == currentLang && data.word.Length >= 3)
+                foreach (DataSnapshot child in snapshot.Children)
                 {
-                    possibleWords.Add(data.word.ToUpper());
+                    string json = child.GetRawJsonValue();
+                    if (string.IsNullOrEmpty(json)) continue;
+
+                    SimpleScoreData data = JsonUtility.FromJson<SimpleScoreData>(json);
+
+                    // Dil fark etmeksizin tüm kelimeleri CardData olarak topla
+                    if (data != null && data.word.Length >= 3)
+                    {
+                        possibleWords.Add(new CardData { word = data.word.ToUpper(), language = data.language });
+                    }
                 }
             }
 
             if (possibleWords.Count > 0)
             {
-                StartGame(possibleWords[Random.Range(0, possibleWords.Count)]);
+                // Rastgele bir kelime seç ve dilini kaydet
+                CardData selected = possibleWords[Random.Range(0, possibleWords.Count)];
+                currentLanguage = selected.language;
+                StartGame(selected.word);
             }
             else
             {
-                StartGame(backupWords[Random.Range(0, backupWords.Count)]);
+                StartGameWithBackup();
             }
         });
+    }
+
+    void StartGameWithBackup()
+    {
+        currentLanguage = "English"; // Yedek kelimeler için varsayýlan dil
+        StartGame(backupWords[Random.Range(0, backupWords.Count)]);
     }
 
     void StartGame(string word)
@@ -96,14 +113,11 @@ public class WordScrambleManager : MonoBehaviour
         currentWord = word.ToUpper();
         isInteractable = true;
 
-        // Yazýyý gizle (Eðer açýk kaldýysa)
         if (feedbackText != null) feedbackText.gameObject.SetActive(false);
 
-        // Temizlik
         foreach (Transform child in answerArea) Destroy(child.gameObject);
         foreach (Transform child in letterArea) Destroy(child.gameObject);
 
-        // Karýþtýrma
         char[] chars = currentWord.ToCharArray();
         ShuffleArray(chars);
 
@@ -111,7 +125,7 @@ public class WordScrambleManager : MonoBehaviour
         {
             GameObject obj = Instantiate(letterPrefab, letterArea);
             ScrambleLetter script = obj.GetComponent<ScrambleLetter>();
-            script.Setup(c, this);
+            if (script != null) script.Setup(c, this);
         }
     }
 
@@ -154,52 +168,44 @@ public class WordScrambleManager : MonoBehaviour
     IEnumerator TryAgainRoutine()
     {
         isInteractable = false;
-
-        // Harfleri Kýrmýzý Yap
         foreach (Transform child in answerArea)
             child.GetComponent<Image>().color = Color.red;
 
-        // "YANLIÞ" yazýsý da gösterebiliriz istersen ama þimdilik sadece kýrmýzý olsun
         yield return new WaitForSeconds(1.5f);
 
-        // Harfleri Aþaðýya Gönder
         List<Transform> letters = new List<Transform>();
         foreach (Transform child in answerArea) letters.Add(child);
 
         foreach (Transform t in letters)
         {
             ScrambleLetter script = t.GetComponent<ScrambleLetter>();
-            script.MoveToPool(letterArea);
-            t.GetComponent<Image>().color = Color.white;
+            if (script != null)
+            {
+                script.MoveToPool(letterArea);
+                t.GetComponent<Image>().color = Color.white;
+            }
         }
 
         isInteractable = true;
     }
 
-    // --- TEBRÝKLER KISMI BURADA ---
     IEnumerator OnLevelComplete()
     {
         isInteractable = false;
-
-        // 1. Harfleri Yeþil Yap
         foreach (Transform child in answerArea)
             child.GetComponent<Image>().color = Color.green;
 
-        // 2. TEBRÝKLER Yazýsýný Aç
         if (feedbackText != null)
         {
             feedbackText.text = "TEBRÝKLER!";
             feedbackText.gameObject.SetActive(true);
         }
 
-        // 3. Sesi Oku
+        // KELÝMENÝN KENDÝ AKSANIYLA OKUNMASI
         if (TextToSpeechManager.Instance != null)
-            TextToSpeechManager.Instance.Speak(currentWord, PronunciationGame.CurrentLanguage);
+            TextToSpeechManager.Instance.Speak(currentWord, currentLanguage);
 
-        // 4. Ýki Saniye Bekle (Yazýyý okusun diye)
         yield return new WaitForSeconds(2.0f);
-
-        // 5. Yeni Soruya Geç (Yazý StartGame içinde otomatik kapanacak)
         LoadWordFromFirebase();
     }
 
@@ -217,7 +223,7 @@ public class WordScrambleManager : MonoBehaviour
     public void PlayHint()
     {
         if (TextToSpeechManager.Instance != null)
-            TextToSpeechManager.Instance.Speak(currentWord, PronunciationGame.CurrentLanguage);
+            TextToSpeechManager.Instance.Speak(currentWord, currentLanguage);
     }
 
     public void BackToMenu()

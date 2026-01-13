@@ -4,6 +4,7 @@ using TMPro;
 using Firebase;
 using Firebase.Database;
 using Firebase.Extensions;
+using Firebase.Auth; // <-- EKLENDİ: Kullanıcıyı tanımak için şart!
 using System.Collections.Generic;
 
 public class ProgressManager : MonoBehaviour
@@ -16,7 +17,7 @@ public class ProgressManager : MonoBehaviour
     private string targetLanguage = "";
 
     private DatabaseReference dbReference;
-    private DataSnapshot currentSnapshot; 
+    private DataSnapshot currentSnapshot;
 
     void OnEnable()
     {
@@ -27,15 +28,14 @@ public class ProgressManager : MonoBehaviour
     {
         dbReference = FirebaseDatabase.DefaultInstance.RootReference;
     }
+
     void ResetPanel()
     {
         targetLanguage = "";
-
         currentSnapshot = null;
 
         if (learnedListText) learnedListText.text = "";
         if (studyListText) studyListText.text = "";
-
         if (loadingText) loadingText.text = "Yukarıdaki menüden bir dil seçin.";
     }
 
@@ -55,16 +55,29 @@ public class ProgressManager : MonoBehaviour
 
     public void LoadProgressData()
     {
+        // 1. ADIM: Giriş yapmış kullanıcıyı bul
+        var currentUser = FirebaseAuth.DefaultInstance.CurrentUser;
+
+        if (currentUser == null)
+        {
+            if (loadingText) loadingText.text = "Lütfen önce giriş yapın!";
+            return;
+        }
+
+        string userId = currentUser.UserId; // Kullanıcının ID'si
+
         if (dbReference == null) dbReference = FirebaseDatabase.DefaultInstance.RootReference;
 
         if (loadingText && !string.IsNullOrEmpty(targetLanguage))
             loadingText.text = targetLanguage + " verileri yükleniyor...";
 
-        dbReference.Child("scores").GetValueAsync().ContinueWithOnMainThread(task =>
+        // 2. ADIM: Sadece O KULLANICININ verisini çek (scores -> UserID)
+        dbReference.Child("scores").Child(userId).GetValueAsync().ContinueWithOnMainThread(task =>
         {
             if (task.IsFaulted)
             {
                 if (loadingText) loadingText.text = "Bağlantı Hatası.";
+                Debug.LogError("Veri çekme hatası: " + task.Exception);
             }
             else if (task.IsCompleted)
             {
@@ -82,29 +95,41 @@ public class ProgressManager : MonoBehaviour
 
         if (loadingText) loadingText.text = targetLanguage + " Raporu Hazırlanıyor...";
 
+        // Veri var mı kontrolü
         if (snapshot != null && snapshot.ChildrenCount > 0)
         {
             foreach (DataSnapshot child in snapshot.Children)
             {
                 string json = child.GetRawJsonValue();
-                UserScore data = JsonUtility.FromJson<UserScore>(json);
 
-                if (data != null)
+                // Hata önleyici try-catch (Bazen bozuk veri gelebilir)
+                try
                 {
-                    if (string.IsNullOrEmpty(data.language) || data.language != targetLanguage)
-                        continue;
+                    UserScore data = JsonUtility.FromJson<UserScore>(json);
 
-                    string wordKey = data.word.ToLower().Trim();
+                    if (data != null)
+                    {
+                        // Dil kontrolü (Boşsa veya eşleşmiyorsa geç)
+                        if (string.IsNullOrEmpty(data.language) || data.language != targetLanguage)
+                            continue;
 
-                    if (bestScores.ContainsKey(wordKey))
-                    {
-                        if (data.score > bestScores[wordKey])
-                            bestScores[wordKey] = data.score;
+                        string wordKey = data.word.ToLower().Trim();
+
+                        // En yüksek puanı tutma mantığı
+                        if (bestScores.ContainsKey(wordKey))
+                        {
+                            if (data.score > bestScores[wordKey])
+                                bestScores[wordKey] = data.score;
+                        }
+                        else
+                        {
+                            bestScores.Add(wordKey, data.score);
+                        }
                     }
-                    else
-                    {
-                        bestScores.Add(wordKey, data.score);
-                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("Veri okuma hatası (önemsiz): " + ex.Message);
                 }
             }
         }
@@ -112,6 +137,7 @@ public class ProgressManager : MonoBehaviour
         string learnedTextContent = "";
         string studyTextContent = "";
 
+        // Listeleri oluştur
         foreach (var item in bestScores)
         {
             string word = item.Key;
@@ -119,9 +145,9 @@ public class ProgressManager : MonoBehaviour
             string displayWord = char.ToUpper(word[0]) + word.Substring(1);
 
             if (score >= 70)
-                learnedTextContent += $"+ {displayWord} (%{score})\n";
+                learnedTextContent += $"✅ {displayWord} (%{score})\n"; // Biraz süsledim
             else
-                studyTextContent += $"- {displayWord} (%{score})\n";
+                studyTextContent += $"📖 {displayWord} (%{score})\n";
         }
 
         if (learnedListText) learnedListText.text = learnedTextContent;
@@ -129,14 +155,18 @@ public class ProgressManager : MonoBehaviour
 
         if (bestScores.Count == 0)
         {
-            if (loadingText) loadingText.text = targetLanguage + " için henüz kayıt yok.";
+            if (loadingText) loadingText.text = targetLanguage + " için henüz veri yok.";
         }
         else
         {
-            if (loadingText) loadingText.text = "";
+            if (loadingText) loadingText.text = ""; // Yükleniyor yazısını sil
         }
     }
 }
+
+// NOT: Eğer bu class 'PronunciationGame.cs' dosyasında zaten varsa
+// ve "Duplicate definition" hatası alırsan, aşağıdaki kısmı sil.
+// Eğer yoksa kalsın.
 
 [System.Serializable]
 public class UserScore
