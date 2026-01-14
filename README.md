@@ -1,49 +1,40 @@
-🎓 Graduation Project: AR-Powered Language Learning App with YOLO & AI
-Bu çalışma, üniversite eğitimimin Mezuniyet Projesi (Senior Project) kapsamında geliştirilmiştir. Proje, çocukların yabancı dil öğrenme sürecini fiziksel dünya ile ilişkilendiren; Artırılmış Gerçeklik (AR), Nesne Algılama (YOLOv4) ve Üretken Yapay Zeka (Gemini) teknolojilerini birleştiren kapsamlı bir mobil eğitim platformudur.
+# Graduation Project: AI & AR-Powered Language Learning platform
 
-✨ Öne Çıkan Özellikler
-Gerçek Zamanlı Nesne Tanıma: YOLOv4-Tiny mimarisi ve OpenCV kullanarak çevredeki nesneleri anlık olarak tespit eder.
+Bu proje, üniversite mezuniyet çalışmam olarak geliştirilmiş; **Nesne Algılama (YOLOv4)**, **Artırılmış Gerçeklik (AR)** ve **Üretken Yapay Zeka (Gemini API)** teknolojilerini bir araya getiren yenilikçi bir dil öğrenme mobil uygulamasıdır.
 
-AR Etiketleme: Tespit edilen nesnelerin isimlerini Unity WorldSpace Canvas aracılığıyla doğrudan nesne üzerine AR etiketi olarak yansıtır.
+---
 
-Çok Dilli Telaffuz (TTS): İngilizce, Almanca, İspanyolca ve İtalyanca dillerinde asenkron seslendirme desteği sağlar.
+## Temel Özellikler
 
-Oyunlaştırılmış Eğitim: Hafıza oyunları (Memory Game) ve kelime karıştırma (Word Scramble) modülleri ile öğrenmeyi eğlenceli hale getirir.
+* **Gerçek Zamanlı Nesne Tanıma:** YOLOv4-Tiny mimarisi ile çevredeki 80 farklı nesne sınıfını anlık olarak tespit eder.
+* **AR Etiketleme:** Tanınan nesnelerin üzerine, seçilen hedef dildeki karşılıklarını AR teknolojisiyle yerleştirir.
+* **Akıllı Telaffuz Analizi:** Whisper ve Gemini API kullanarak kullanıcının konuşma pratiğini değerlendirir ve geri bildirim verir.
+* **Oyunlaştırılmış Öğrenme:** Hafıza kartları ve kelime karıştırma oyunları ile kelime bilgisini pekiştirir.
+* **Bulut Senkronizasyonu:** Firebase entegrasyonu ile kullanıcı skorlarını ve ilerlemesini anlık olarak saklar.
 
-AI Destekli Analiz: Kullanıcı telaffuzlarını Whisper ve Gemini API'leri üzerinden analiz ederek geri bildirim sunar.
+## Teknik Altyapı
 
-Bulut Veri Yönetimi: Kullanıcı ilerlemesi ve puanlama sistemini Firebase Realtime Database üzerinden senkronize eder.
+| Kategori | Kullanılan Teknolojiler |
+| --- | --- |
+| **Geliştirme Motoru** | Unity 2022.x+ |
+| **Dil** | C# (Scripts) |
+| **Yapay Zeka** | YOLOv4-Tiny, OpenCV for Unity, Google Gemini, OpenAI Whisper |
+| **Backend** | Firebase Auth & Realtime Database |
+| **Platform** | Android (ARM64, IL2CPP Architecture) |
 
-🛠️ Kullanılan Teknolojiler
-Motor: Unity 2022.x+
+## Saha Testleri ve Analiz
 
-Dil: C#
+Uygulama, gerçek dünya koşullarında test edilmiştir. Diş fırçası, makas ve kedi gibi COCO veri setinde tanımlı nesneler üzerinde yüksek başarı oranı göstermiştir. AirPods gibi tanımlı olmayan nesneler üzerinde yapılan testler, sistemin sınırlılıklarını ve gelecek geliştirme alanlarını belirlemek için dökümante edilmiştir.
 
-AI/ML: YOLOv4-Tiny, OpenCV for Unity, Google Gemini API, OpenAI Whisper.
+## Kurulum Notları
 
-Backend: Firebase Auth & Realtime Database.
+1. Unity projesini klonlayın.
+2. **EDM4U** üzerinden Android kütüphane bağımlılıklarını güncelleyin.
+3. Kendi `google-services.json` dosyanızı projeye dahil edin.
+4. Build Settings'ten Android platformu için APK çıktısı alın.
 
-Platform: Android (ARM64, IL2CPP).
+---
 
-📊 Saha Testleri
-Uygulama, COCO veri seti temelinde test edilmiş; günlük nesneler (diş fırçası, kedi, makas vb.) üzerinde yüksek doğrulukla çalışmıştır. Tanımlı olmayan nesneler için (Örn: AirPods) hata analizi yapılmış ve gelecek çalışmalar için yol haritası belirlenmiştir.
+> **Not:** Bu çalışma, benim ilk kapsamlı mobil geliştirme projemdir. Proje süresince veritabanı mimarisinin yeniden yapılandırılması, kütüphane çakışmalarının çözülmesi ve çok dilli asenkron sistemlerin entegrasyonu gibi teknik süreçler bizzat yönetilmiştir.
 
-🔧 Kurulum ve Derleme
-Projeyi klonlayın.
-
-Unity Hub üzerinden projeyi açın.
-
-External Dependency Manager (EDM4U) aracılığıyla Android bağımlılıklarını çözümleyin.
-
-Firebase yapılandırma dosyasını (google-services.json) ekleyin.
-
-Build Settings'ten platformu Android olarak seçin, IL2CPP ve ARM64 ayarlarını aktif ederek APK çıktısı alın.
-
-📝 Akademik Süreç ve Geliştirme
-Bu proje, benim ilk kapsamlı mobil geliştirme ve APK yayına hazırlık deneyimimdir. Projenin akademik kurgusu ve geliştirilmesi sürecinde;
-
-Danışman hocamın rehberliğinde teknik dökümantasyon hazırlanmış,
-
-Bozuk veritabanı şemaları baştan inşa edilmiş,
-
-Kütüphane çakışmaları ve platform kısıtlamaları (Android ARM64/IL2CPP) çözülerek çalışan bir ürün haline getirilmiştir.
+---
